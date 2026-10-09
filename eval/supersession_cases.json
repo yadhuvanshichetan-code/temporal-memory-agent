@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "old_fact": "Alice is a Senior Software Engineer.",
+    "new_fact": "Alice got promoted to Staff Engineer.",
+    "query": "What is Alice's current job title?",
+    "expected": "Staff Engineer",
+    "stale": "Senior Software Engineer"
+  },
+  {
+    "id": 2,
+    "old_fact": "Bob lives in New York.",
+    "new_fact": "Bob moved to San Francisco.",
+    "query": "Where does Bob live now?",
+    "expected": "San Francisco",
+    "stale": "New York"
+  },
+  {
+    "id": 3,
+    "old_fact": "Carol's phone is 555-1234.",
+    "new_fact": "Carol changed her phone number to 555-9876.",
+    "query": "What is Carol's current phone number?",
+    "expected": "555-9876",
+    "stale": "555-1234"
+  },
+  {
+    "id": 4,
+    "old_fact": "Dave works at Google.",
+    "new_fact": "Dave left Google and now works at OpenAI.",
+    "query": "Where does Dave work?",
+    "expected": "OpenAI",
+    "stale": "Google"
+  },
+  {
+    "id": 5,
+    "old_fact": "Eve's favorite color is blue.",
+    "new_fact": "Eve now says her favorite color is green.",
+    "query": "What is Eve's favorite color?",
+    "expected": "green",
+    "stale": "blue"
+  },
+  {
+    "id": 6,
+    "old_fact": "Frank drives a Honda Civic.",
+    "new_fact": "Frank bought a Tesla Model 3.",
+    "query": "What car does Frank drive?",
+    "expected": "Tesla Model 3",
+    "stale": "Honda Civic"
+  },
+  {
+    "id": 7,
+    "old_fact": "Grace's meeting is at 3pm.",
+    "new_fact": "Grace rescheduled her meeting to 5pm.",
+    "query": "When is Grace's meeting?",
+    "expected": "5pm",
+    "stale": "3pm"
+  },
+  {
+    "id": 8,
+    "old_fact": "Henry is allergic to peanuts.",
+    "new_fact": "Henry's doctor confirmed he is no longer allergic to peanuts.",
+    "query": "Is Henry still allergic to peanuts?",
+    "expected": "no longer",
+    "stale": "is allergic"
+  },
+  {
+    "id": 9,
+    "old_fact": "Ivy weighs 60 kg.",
+    "new_fact": "Ivy lost weight and now weighs 55 kg.",
+    "query": "How much does Ivy weigh?",
+    "expected": "55",
+    "stale": "60"
+  },
+  {
+    "id": 10,
+    "old_fact": "Jack is single.",
+    "new_fact": "Jack got married last month.",
+    "query": "What is Jack's marital status?",
+    "expected": "married",
+    "stale": "single"
+  }
+]
