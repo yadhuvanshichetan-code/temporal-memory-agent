@@ -1,6 +1,11 @@
 """
-Fact Extractor — Rule-based extraction of (subject, predicate, object) from
-natural language sentences.
+Fact Extractor — Rule-based extraction of (subject, predicate, object)
+from natural language sentences.
+
+Handles:
+  - Statements (facts to store)
+  - Questions (queries to answer)
+  - Historical queries (e.g., "what was alice's job in 2024?")
 """
 
 import re
@@ -31,26 +36,20 @@ PREDICATE_PATTERNS = [
     (r"\b(owns|has|drives|bought)\b", "possession"),
 
     # Multi-word job titles (matched as the object)
-    (r"\b(software engineer|staff engineer|senior engineer|data scientist|product manager|project manager|engineering manager|software developer|web developer|product designer|ux designer)\b",
+    (r"\b(software engineer|staff engineer|senior engineer|"
+     r"data scientist|product manager|project manager|"
+     r"engineering manager|software developer|web developer|"
+     r"product designer|ux designer|machine learning engineer)\b",
      "job_multiword"),
 
     # Single-word job titles with "is a/an"
-    (r"\bis (a|an)\s+(engineer|manager|doctor|teacher|student|designer|developer|scientist|analyst|director|intern|lead|architect|consultant|nurse|lawyer|chef|writer|artist)\b",
+    (r"\bis (a|an)\s+"
+     r"(engineer|manager|doctor|teacher|student|designer|developer|"
+     r"scientist|analyst|director|intern|lead|architect|consultant|"
+     r"nurse|lawyer|chef|writer|artist)\b",
      "job_singleword"),
 
-    # Location
-    (r"\b(lives in|moved to|is from|resides in|now lives in|based in)\b", "location"),
-
-    # Age
-    (r"\b(is|turned)\s+\d+\s*(years old|yo)\b", "age"),
-
-    # Preferences
-    (r"\b(likes|prefers|favorite|favourite)\b", "preference"),
-
-    # Possession
-    (r"\b(owns|has|drives|bought)\b", "possession"),
-
-    # Generic "X is a/an Y" fallback (LAST)
+    # Generic "is a/an" fallback (LAST)
     (r"\bis (a|an)\b", "attribute"),
 ]
 
@@ -62,6 +61,7 @@ QUESTION_STARTERS = (
 
 
 def is_question(text: str) -> bool:
+    """Return True if the sentence looks like a question."""
     t = text.strip().lower()
     if t.endswith("?"):
         return True
@@ -69,10 +69,12 @@ def is_question(text: str) -> bool:
 
 
 def normalize(text: str) -> str:
+    """Trim and lowercase a piece of text."""
     return text.strip().lower().rstrip(".").rstrip("?").rstrip("!")
 
 
 def extract_fact(sentence: str):
+    """Extract (subject, predicate, object) from a statement."""
     s = normalize(sentence)
     if not s:
         return None
@@ -98,7 +100,10 @@ def extract_fact(sentence: str):
         if tag == "job_multiword":
             job_word = match.group(1)
             subject = s[:match.start()].strip().replace("'s", "").strip()
-            subject = re.sub(r"\s+(is a|is an|is|was a|was an|was|now|got|became)$", "", subject).strip()
+            subject = re.sub(
+                r"\s+(is a|is an|is|was a|was an|was|now|got|became)$",
+                "", subject
+            ).strip()
             if subject:
                 return {
                     "subject": subject,
@@ -107,7 +112,7 @@ def extract_fact(sentence: str):
                 }
             continue
 
-        # Job change ("got promoted to X"): object is after match
+        # Job change: "dave got promoted to manager"
         if tag == "job_change":
             subject = s[:match.start()].strip().replace("'s", "").strip()
             obj = s[match.end():].strip()
@@ -120,7 +125,7 @@ def extract_fact(sentence: str):
                 }
             continue
 
-        # Single-word job ("is a teacher")
+        # Single-word job: "alice is a teacher"
         if tag == "job_singleword":
             subject = s[:match.start()].strip().replace("'s", "").strip()
             job_word = match.group(2)
@@ -132,7 +137,7 @@ def extract_fact(sentence: str):
                 }
             continue
 
-        # Generic patterns (location, phone, etc.)
+        # Generic patterns (location, phone, preference, etc.)
         subject = s[:match.start()].strip().replace("'s", "").strip()
         obj = s[match.end():].strip()
         obj = re.sub(r"^(a|an|the|at|in|to|now)\s+", "", obj).strip()
@@ -149,6 +154,14 @@ def extract_fact(sentence: str):
 
 
 def extract_query(sentence: str):
+    """
+    Extract a query hint (subject + predicate + optional as_of year)
+    from a question.
+
+    Examples:
+      "what is alice job?"          → {'subject': 'alice', 'predicate': 'job_title', 'as_of_year': None}
+      "what was alice job in 2024?" → {'subject': 'alice', 'predicate': 'job_title', 'as_of_year': 2024}
+    """
     s = normalize(sentence)
     if not s:
         return None
@@ -181,15 +194,34 @@ def extract_query(sentence: str):
             predicate = pred
             break
 
-    cleaned = re.sub(r"^(what|where|who|when|is|are|was|were|does|do|did|how)\s+", "", s)
-    cleaned = re.sub(r"\b(is|are|was|were|does|do|did|the|a|an|s)\b", " ", cleaned)
+    # ---- Detect year in query (e.g., "in 2024") ----
+    as_of_year = None
+    year_match = re.search(r"\b(19|20)\d{2}\b", s)
+    if year_match:
+        as_of_year = int(year_match.group(0))
+
+    # ---- Extract subject ----
+    cleaned = re.sub(
+        r"^(what|where|who|when|is|are|was|were|does|do|did|how)\s+",
+        "", s
+    )
+    cleaned = re.sub(r"\b(19|20)\d{2}\b", "", cleaned)  # remove the year
+    cleaned = re.sub(
+        r"\b(is|are|was|were|does|do|did|the|a|an|s|in|at|on)\b",
+        " ", cleaned
+    )
     tokens = [t for t in cleaned.split() if t]
 
     subject = tokens[0] if tokens else None
 
-    return {"subject": subject, "predicate": predicate}
+    return {
+        "subject": subject,
+        "predicate": predicate,
+        "as_of_year": as_of_year,
+    }
 
 
+# --- Quick test ---
 if __name__ == "__main__":
     tests = [
         "alice is a software engineer",
@@ -202,6 +234,8 @@ if __name__ == "__main__":
         "what is alice job?",
         "where does bob live?",
         "what is carol phone?",
+        "what was alice job in 2024?",
+        "what was alice's job in 2023?",
     ]
 
     for t in tests:
