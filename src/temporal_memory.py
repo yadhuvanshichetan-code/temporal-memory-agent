@@ -1,8 +1,14 @@
 """
 Temporal Memory — triples with valid_from / valid_to.
 When a new fact supersedes an old one, the old fact's validity is closed.
+
+Now supports persistence:
+  - save(path) — write all facts to a JSON file
+  - load(path) — read facts back from a JSON file
 """
 
+import json
+import os
 from datetime import datetime
 
 
@@ -52,7 +58,6 @@ class TemporalMemory:
         ]
         if not matches:
             return None
-        # Most recent valid_from wins
         matches.sort(key=lambda f: f["valid_from"], reverse=True)
         return matches[0]
 
@@ -63,6 +68,20 @@ class TemporalMemory:
              if f["subject"] == subject and f["predicate"] == predicate],
             key=lambda f: f["valid_from"],
         )
+
+    def save(self, path: str = "memory.json"):
+        """Save all facts to a JSON file."""
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.facts, f, indent=2)
+        print(f"[memory] Saved {len(self.facts)} facts to {path}")
+
+    def load(self, path: str = "memory.json"):
+        """Load facts from a JSON file (if it exists)."""
+        if not os.path.exists(path):
+            return
+        with open(path, "r", encoding="utf-8") as f:
+            self.facts = json.load(f)
+        print(f"[memory] Loaded {len(self.facts)} facts from {path}")
 
 
 # --- Quick test (same scenario that broke vector memory) ---
@@ -89,3 +108,11 @@ if __name__ == "__main__":
         print(f"  {f['valid_from'][:10]} → "
               f"{f['valid_to'][:10] if f['valid_to'] else 'present'} : "
               f"{f['object']}")
+
+    # Test persistence
+    print("\n--- Testing persistence ---")
+    mem.save("test_memory.json")
+
+    mem2 = TemporalMemory()
+    mem2.load("test_memory.json")
+    print(f"Loaded facts count: {len(mem2.facts)}")

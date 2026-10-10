@@ -1,6 +1,6 @@
 """
 ChronoMind — Persistent Temporal Memory Agent
-Interactive agent that learns facts from your sentences and answers questions.
+Interactive agent that remembers facts across restarts.
 
 Features:
   - Extract facts from natural language
@@ -8,6 +8,7 @@ Features:
   - Detect supersession (new facts override old ones)
   - Answer current queries ("what is alice's job?")
   - Answer historical queries ("what was alice's job in 2024?")
+  - Persist memory to disk across restarts
 """
 
 import sys
@@ -20,6 +21,9 @@ from src.extractor import is_question, extract_fact, extract_query
 from src.temporal_memory import TemporalMemory
 
 
+MEMORY_FILE = "memory.json"
+
+
 def format_predicate(predicate: str) -> str:
     """Convert 'job_title' to 'job title' for display."""
     return predicate.replace("_", " ")
@@ -27,6 +31,9 @@ def format_predicate(predicate: str) -> str:
 
 def main():
     memory = TemporalMemory()
+
+    # ---- Load previous memory if it exists ----
+    memory.load(MEMORY_FILE)
 
     print("=" * 65)
     print("  ChronoMind — Persistent Temporal Memory Agent")
@@ -38,13 +45,15 @@ def main():
         try:
             user_input = input("You: ").strip()
         except (EOFError, KeyboardInterrupt):
-            print("\nAgent: Goodbye!")
+            memory.save(MEMORY_FILE)
+            print("\nAgent: Goodbye! Memory saved.")
             break
 
         if not user_input:
             continue
 
         if user_input.lower() in ("exit", "quit", "bye"):
+            memory.save(MEMORY_FILE)
             print("Agent: Goodbye! I've saved everything to memory.")
             break
 
@@ -63,7 +72,7 @@ def main():
                 print(f"Agent: I'm not sure what you're asking about {subject}.")
                 continue
 
-            # ---- Historical query: "what was alice's job in 2024?" ----
+            # ---- Historical query ----
             if as_of_year:
                 as_of_ts = f"{as_of_year}-06-15T00:00:00"
                 result = memory.query(subject, predicate, as_of=as_of_ts)
@@ -76,7 +85,7 @@ def main():
                           f"in {as_of_year}.")
                 continue
 
-            # ---- Current query: "what is alice's job?" ----
+            # ---- Current query ----
             result = memory.query(subject, predicate)
             if result:
                 print(f"Agent: {subject} {format_predicate(predicate)} "
